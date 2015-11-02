@@ -61,10 +61,6 @@ public class FFLabel: UILabel {
     
     /// add link attribute
     private func addLinkAttribute(attrStringM: NSMutableAttributedString) {
-        if attrStringM.length == 0 {
-            return
-        }
-        
         var range = NSRange(location: 0, length: 0)
         var attributes = attrStringM.attributesAtIndex(0, effectiveRange: &range)
         
@@ -80,7 +76,8 @@ public class FFLabel: UILabel {
     }
     
     /// use regex check all link ranges
-    private let patterns = ["[a-zA-Z]*://[a-zA-Z0-9/\\.]*", "#.*?#", "@[\\u4e00-\\u9fa5a-zA-Z0-9_-]*"]
+ //   private let patterns = ["[a-zA-Z]*://[a-zA-Z0-9/\\.]*", "#.*?#", "@[\\u4e00-\\u9fa5a-zA-Z0-9_-]*"]
+    private let patterns = ["[a-zA-Z]*://[a-zA-Z0-9?=&_/\\.]*", "#.*?#", "@[\\u4e00-\\u9fa5a-zA-Z0-9_-]*"]
     private func regexLinkRanges(attrString: NSAttributedString) {
         linkRanges.removeAll()
         let regexRange = NSRange(location: 0, length: attrString.string.characters.count)
@@ -98,10 +95,6 @@ public class FFLabel: UILabel {
     /// add line break mode
     private func addLineBreak(attrString: NSAttributedString) -> NSMutableAttributedString {
         let attrStringM = NSMutableAttributedString(attributedString: attrString)
-        
-        if attrStringM.length == 0 {
-            return attrStringM
-        }
         
         var range = NSRange(location: 0, length: 0)
         var attributes = attrStringM.attributesAtIndex(0, effectiveRange: &range)
@@ -171,6 +164,11 @@ public class FFLabel: UILabel {
             dispatch_after(when, dispatch_get_main_queue()) {
                 self.modifySelectedAttribute(false)
             }
+        } else {
+            // 如果没有在显示文字中读取到 url，则判断属性 url 是否有值
+            if url != nil {
+                labelDelegate?.labelDidSelectedLinkText!(self, text: url!)
+            }
         }
     }
     
@@ -230,6 +228,46 @@ public class FFLabel: UILabel {
         prepareLabel()
     }
     
+    /// 便利构造函数
+    ///
+    /// - parameter url:         要跳转的 urlString
+    /// - parameter title:       title
+    /// - parameter fontSize:    fontSize - default = 14
+    /// - parameter color:       color - default = UIColor.darkGrayColor()
+    /// - parameter screenInset: 相对与屏幕左右的缩紧，默认为0，局中显示，如果设置，则左对齐
+    ///
+    /// - returns: UILabel
+    convenience public init(url: String,
+        title: String,
+        fontSize: CGFloat = 14,
+        color: UIColor = UIColor.darkGrayColor(),
+        screenInset: CGFloat = 0){
+            
+        self.init()
+        
+        text = title
+        textColor = color
+        font = UIFont.systemFontOfSize(fontSize)
+        
+        numberOfLines = 0
+        
+        if screenInset == 0 {
+            textAlignment = .Center
+        } else {
+            // 设置换行宽度
+            preferredMaxLayoutWidth = UIScreen.mainScreen().bounds.width - 2 * screenInset
+            textAlignment = .Left
+        }
+           
+        sizeToFit()
+        
+        if url.hasPrefix("http://") || url.hasPrefix("https://") || url.hasPrefix("ftp://") {
+            self.url = url
+        }
+            
+        prepareLabel()
+    }
+    
     public override func layoutSubviews() {
         super.layoutSubviews()
         
@@ -251,4 +289,6 @@ public class FFLabel: UILabel {
     private lazy var textStorage = NSTextStorage()
     private lazy var layoutManager = NSLayoutManager()
     private lazy var textContainer = NSTextContainer()
+    // 需要跳转到的 urlString
+    private var url: String?
 }
